@@ -81,7 +81,18 @@ def search(
 
 @app.command("import-csv")
 def import_csv(
-    input: Annotated[Path, typer.Option("--input")],
+    input: Annotated[
+        Path,
+        typer.Option(
+            "--input",
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+            readable=True,
+            resolve_path=True,
+            help="Existing CSV file to import.",
+        ),
+    ],
     config: Path = Path("pipeline.toml"),
 ) -> None:
     """Import metadata and existing valid PDFs from CSV."""
