@@ -61,7 +61,8 @@ class DownloadClient:
         headers = dict(candidate.headers)
         if offset:
             headers["Range"] = f"bytes={offset}-"
-        async with self.session.get(candidate.url, headers=headers) as response:
+        timeout = aiohttp.ClientTimeout(total=90, connect=20, sock_read=30)
+        async with self.session.get(candidate.url, headers=headers, timeout=timeout) as response:
             if response.status in {429, 500, 502, 503, 504}:
                 return DownloadResult(
                     status="retry", bytes=int(_retry_after(response.headers.get("Retry-After")))

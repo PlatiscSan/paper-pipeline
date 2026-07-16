@@ -50,6 +50,22 @@ async def test_pmc_includes_europe_pmc_full_text_candidate() -> None:
     assert candidates[0].url.endswith("/PMC123/fullTextPDF")
 
 
+@pytest.mark.asyncio
+async def test_publisher_apis_are_routed_by_doi_owner() -> None:
+    resolver = Resolver(None, springer_key="springer", elsevier_key="elsevier")  # type: ignore[arg-type]
+    resolver._springer = AsyncMock(return_value=[])  # type: ignore[method-assign]
+    wiley = Paper(doi="10.1002/advs.1", title="Wiley", canonical_key="doi:10.1002/advs.1")
+    elsevier = Paper(
+        doi="10.1016/j.apcatb.2024.1",
+        title="Elsevier",
+        canonical_key="doi:10.1016/j.apcatb.2024.1",
+    )
+
+    assert not [item for item in await resolver.candidates(wiley) if "api" in item.method]
+    assert [item.method for item in await resolver.candidates(elsevier)] == ["elsevier_api"]
+    resolver._springer.assert_not_awaited()
+
+
 def test_plos_publisher_pdf_candidate() -> None:
     resolver = Resolver(None)  # type: ignore[arg-type]
 

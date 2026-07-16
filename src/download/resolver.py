@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 
 PDF_LABEL = re.compile(r"\b(?:open|view|download|full\s*text)?\s*pdf\b", re.I)
 BLOCKED_LABELS = ("login", "log in", "sign in", "purchase", "subscribe", "institutional")
+SPRINGER_DOI_PREFIXES = ("10.1007/", "10.1038/", "10.1186/")
+ELSEVIER_DOI_PREFIXES = ("10.1006/", "10.1016/", "10.1053/", "10.1054/", "10.1067/", "10.1078/")
 
 
 class _PDFLinkParser(HTMLParser):
@@ -99,28 +101,29 @@ class Resolver:
         if paper.doi and self.semantic_key:
             result.extend(await self._semantic(paper.doi))
         if paper.doi and self.use_publisher_apis:
+            normalized_doi = paper.doi.strip().lower()
             plos = self._plos(paper.doi)
             if plos:
                 logger.debug(
                     "Publisher lookup: doi=%s publisher=plos candidates=%d", paper.doi, len(plos)
                 )
                 result.extend(plos)
-            if self.springer_key:
-                result.extend(await self._springer(paper.doi))
-            else:
+            if normalized_doi.startswith(SPRINGER_DOI_PREFIXES) and self.springer_key:
+                result.extend(await self._springer(normalized_doi))
+            elif normalized_doi.startswith(SPRINGER_DOI_PREFIXES):
                 logger.debug(
                     "Publisher lookup skipped: doi=%s publisher=springer_nature reason=no_api_key",
                     paper.doi,
                 )
-            if self.elsevier_key:
-                elsevier = self._elsevier(paper.doi)
+            if normalized_doi.startswith(ELSEVIER_DOI_PREFIXES) and self.elsevier_key:
+                elsevier = self._elsevier(normalized_doi)
                 logger.debug(
                     "Publisher lookup: doi=%s publisher=elsevier candidates=%d",
                     paper.doi,
                     len(elsevier),
                 )
                 result.extend(elsevier)
-            else:
+            elif normalized_doi.startswith(ELSEVIER_DOI_PREFIXES):
                 logger.debug(
                     "Publisher lookup skipped: doi=%s publisher=elsevier reason=no_api_key",
                     paper.doi,
