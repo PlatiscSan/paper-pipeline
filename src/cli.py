@@ -15,6 +15,7 @@ from paper_pipeline.db.base import Database
 from paper_pipeline.db.migrations import upgrade
 from paper_pipeline.db.repository import Repository
 from paper_pipeline.download.service import DownloadService
+from paper_pipeline.errors import PipelineError
 from paper_pipeline.export.service import export as export_results
 from paper_pipeline.extract.service import ExtractionService
 from paper_pipeline.importer import import_csv as import_csv_file
@@ -122,7 +123,12 @@ def extract(
     settings, repo = context(config)
     if schema:
         settings.extraction.schema_path = schema.resolve()
-    console.print(asyncio.run(ExtractionService(repo, settings).run(concurrency)))
+    try:
+        service = ExtractionService(repo, settings)
+        console.print(asyncio.run(service.run(concurrency)))
+    except PipelineError as exc:
+        console.print(f"[red]{exc.code}: {exc}[/red]")
+        raise typer.Exit(2) from None
 
 
 @app.command()
@@ -229,6 +235,8 @@ def doctor(probe: bool = False, config: Path = Path("pipeline.toml")) -> None:
     try:
         settings, repo = context(config)
         repo.status()
+        key_env = settings.extraction.provider.api_key_env
+        valid_key_env = key_env.replace("_", "a").isalnum() and not key_env[:1].isdigit()
         checks += [
             ("Database", True, settings.database_url.split("?")[0]),
             (
@@ -238,9 +246,9 @@ def doctor(probe: bool = False, config: Path = Path("pipeline.toml")) -> None:
             ),
             (
                 "AI key",
-                bool(os.getenv(settings.extraction.provider.api_key_env))
-                or settings.extraction.provider.allow_empty_api_key,
-                f"environment {settings.extraction.provider.api_key_env}",
+                valid_key_env
+                and (bool(os.getenv(key_env)) or settings.extraction.provider.allow_empty_api_key),
+                f"environment {key_env}" if valid_key_env else "invalid api_key_env setting",
             ),
             (
                 "base_url",

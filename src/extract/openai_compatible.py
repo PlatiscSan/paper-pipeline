@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +21,11 @@ experiments to review authors."""
 
 class OpenAICompatibleProvider:
     def __init__(self, config: ProviderConfig, extraction: ExtractionConfig) -> None:
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", config.api_key_env):
+            raise PipelineError(
+                ErrorCode.CONFIG_INVALID,
+                "api_key_env must be an environment variable name, not an API key value",
+            )
         key = os.getenv(config.api_key_env, "")
         if not key and not config.allow_empty_api_key:
             raise PipelineError(
