@@ -22,6 +22,7 @@ from paper_pipeline.importer import import_csv as import_csv_file
 from paper_pipeline.logging import configure
 from paper_pipeline.search.base import parse_years
 from paper_pipeline.search.service import SearchService
+from paper_pipeline.visualize_results import generate_report
 from rich.console import Console
 from rich.table import Table
 
@@ -230,6 +231,22 @@ def export_command(
             )
         }
     )
+
+
+@app.command("visualize")
+def visualize_command(
+    input: Annotated[
+        Path,
+        typer.Option("--input", exists=True, file_okay=True, dir_okay=False, readable=True),
+    ] = Path("exports/results.jsonl"),
+    output: Annotated[Path, typer.Option("--output")] = Path("exports/results.html"),
+) -> None:
+    """Generate a self-contained interactive HTML report from JSONL results."""
+    try:
+        count = generate_report(input, output)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from None
+    console.print({"visualized": count, "output": str(output.resolve())})
 
 
 @app.command()

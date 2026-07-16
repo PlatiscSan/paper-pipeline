@@ -95,8 +95,13 @@ paper-pipeline retry --stage download --include-unavailable
 paper-pipeline retry --stage extract
 paper-pipeline export --format csv --output exports/results.csv
 paper-pipeline export --format jsonl --output exports/results.jsonl --only-extracted
+paper-pipeline visualize --input exports/results.jsonl --output exports/results.html
 paper-pipeline doctor
 ```
+
+`visualize` creates a self-contained interactive HTML report with summary counts, title/DOI
+search, extraction-status filtering, and nested extraction fields. Open it in the default browser
+with `Invoke-Item exports/results.html` on PowerShell; it makes no network requests.
 
 Downloads log batch start and periodic progress. With `--verbose`, every completed paper is logged;
 when no request completes for 15 seconds, a heartbeat reports completed and active task counts.
