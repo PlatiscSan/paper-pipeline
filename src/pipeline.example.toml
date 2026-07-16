@@ -1,0 +1,49 @@
+database_url = "sqlite:///data/papers.db"
+papers_dir = "data/papers"
+
+[crawler]
+sources = ["arxiv", "pubmed"]
+total = 100
+concurrency = 5
+delay_seconds = 0.5
+email_env = "ACADEMIC_CRAWLER_EMAIL"
+
+[downloader]
+concurrency = 10
+delay_seconds = 0.2
+retries = 3
+max_size_mb = 100
+email_env = "ACADEMIC_CRAWLER_EMAIL"
+semantic_scholar_api_key_env = "SEMANTIC_SCHOLAR_API_KEY"
+use_unpaywall = true
+use_semantic_scholar = true
+use_crossref = true
+inspect_landing_pages = true
+resume = true
+
+[extraction]
+profile = "catalysis"
+schema = "schemas/catalysis.json"
+concurrency = 4
+retries = 4
+timeout_seconds = 600
+max_output_tokens = 12000
+
+[extraction.provider]
+name = "custom-provider"
+base_url = "https://example.com/v1"
+api_key_env = "AI_API_KEY"
+model = "replace-with-model-id"
+api_style = "chat_completions"
+pdf_mode = "text"
+structured_output = "auto"
+output_token_param = "max_tokens"
+allow_empty_api_key = false
+keep_remote_file = false
+text_chunk_chars = 80000
+max_text_chunks = 0
+
+[extraction.provider.extra_headers]
+
+[extraction.provider.request_options]
+temperature = 0

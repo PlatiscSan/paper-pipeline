@@ -3,8 +3,8 @@
 import asyncio
 import json
 import os
-import shutil
 import sys
+from importlib import resources
 from pathlib import Path
 from typing import Annotated
 from urllib.parse import urlparse
@@ -51,9 +51,9 @@ def init(config: Path = Path("pipeline.toml"), force: bool = False) -> None:
     """Create configuration, data directories, and migrate SQLite."""
     if config.exists() and not force:
         raise typer.BadParameter(f"{config} exists; use --force to overwrite")
-    template = Path(__file__).resolve().parents[2] / "pipeline.example.toml"
     config.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(template, config)
+    template = resources.files("paper_pipeline").joinpath("pipeline.example.toml")
+    config.write_bytes(template.read_bytes())
     settings = load_settings(config)
     settings.papers_dir.mkdir(parents=True, exist_ok=True)
     db_path = Path(settings.database_url.removeprefix("sqlite:///"))
