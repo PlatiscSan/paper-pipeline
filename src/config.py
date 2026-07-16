@@ -21,7 +21,6 @@ class CrawlerConfig(BaseModel):
     total: int = 100
     concurrency: int = 5
     delay_seconds: float = 0.5
-    email_env: str = "ACADEMIC_CRAWLER_EMAIL"
     semantic_scholar_api_key: SecretStr = SecretStr("")
     openalex_api_key: SecretStr = SecretStr("")
 
@@ -31,8 +30,7 @@ class DownloaderConfig(BaseModel):
     delay_seconds: float = 0.2
     retries: int = 3
     max_size_mb: int = 100
-    email_env: str = "ACADEMIC_CRAWLER_EMAIL"
-    semantic_scholar_api_key_env: str = "SEMANTIC_SCHOLAR_API_KEY"
+    semantic_scholar_api_key: SecretStr = SecretStr("")
     use_unpaywall: bool = True
     use_semantic_scholar: bool = True
     use_crossref: bool = True
@@ -44,7 +42,6 @@ class ProviderConfig(BaseModel):
     name: str = "custom-provider"
     base_url: str = "https://example.com/v1"
     api_key: SecretStr = SecretStr("")
-    api_key_env: str = ""
     model: str = "replace-with-model-id"
     api_style: Literal["chat_completions", "responses"] = "chat_completions"
     pdf_mode: Literal["text", "file"] = "text"
@@ -80,6 +77,7 @@ class ExtractionConfig(BaseModel):
 class Settings(BaseModel):
     database_url: str = "sqlite:///data/papers.db"
     papers_dir: Path = Path("data/papers")
+    academic_email: str = ""
     crawler: CrawlerConfig = CrawlerConfig()
     downloader: DownloaderConfig = DownloaderConfig()
     extraction: ExtractionConfig = ExtractionConfig()

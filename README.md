@@ -46,15 +46,15 @@ paper-pipeline init --config pipeline.toml --force
 ```
 
 All relative paths in TOML are resolved against the configuration file's directory, not the
-current working directory. `${ENV_NAME}` expressions are expanded. Copy `.env.example` only as a
-reference: the CLI reads actual process environment variables and never stores or logs API keys.
+current working directory. Credentials are entered in the ignored local `pipeline.toml`; secret
+fields are redacted and are never stored in SQLite or written to logs.
 
 ## Configuration
 
-Copy `pipeline.example.toml`. Replace the provider `base_url` and `model`; set the environment
-value in `api_key`. No provider URL, model, API style, token parameter, or request option is fixed
+Copy `pipeline.example.toml`. Set `academic_email`, replace the provider `base_url` and `model`,
+and set `api_key`. No provider URL, model, API style, token parameter, or request option is fixed
 in code. Keep `pipeline.toml` private; it is ignored by Git and keys are never logged or saved to
-SQLite. The older `api_key_env` option remains available as a fallback.
+SQLite.
 
 Text-mode provider:
 
@@ -146,5 +146,5 @@ AI credentials.
 ## Security and legal scope
 
 Only explicitly public candidates from metadata, arXiv, PMC OA, Unpaywall, Semantic Scholar, and
-publisher citation metadata are considered. Secrets remain in environment variables. Authorization
-headers and keys are never printed or persisted.
+publisher citation metadata are considered. Local configuration is ignored by Git. Authorization
+headers and keys are never printed or persisted in SQLite.

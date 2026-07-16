@@ -1,7 +1,6 @@
 """Paper-level concurrent resolution and download orchestration."""
 
 import asyncio
-import os
 
 import aiohttp
 from paper_pipeline.config import Settings
@@ -29,8 +28,8 @@ class DownloadService:
         async with aiohttp.ClientSession(timeout=timeout) as session:
             resolver = Resolver(
                 session,
-                os.getenv(self.settings.downloader.email_env, ""),
-                os.getenv(self.settings.downloader.semantic_scholar_api_key_env, ""),
+                self.settings.academic_email,
+                self.settings.downloader.semantic_scholar_api_key.get_secret_value(),
             )
             client = DownloadClient(
                 session,

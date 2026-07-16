@@ -16,7 +16,7 @@ Success: no issues found in 34 source files
 
 python -m pytest -q
 .............
-21 passed
+22 passed
 ```
 
 CLI smoke/integration checks:

@@ -50,7 +50,7 @@ def context(config: Path) -> tuple[Settings, Repository]:
 def make_search_service(repository: Repository, settings: Settings) -> SearchService:
     return SearchService(
         repository,
-        os.getenv(settings.crawler.email_env, ""),
+        settings.academic_email,
         settings.crawler.semantic_scholar_api_key.get_secret_value(),
         settings.crawler.openalex_api_key.get_secret_value(),
     )
@@ -243,8 +243,6 @@ def doctor(probe: bool = False, config: Path = Path("pipeline.toml")) -> None:
         settings, repo = context(config)
         repo.status()
         direct_key = settings.extraction.provider.api_key.get_secret_value()
-        key_env = settings.extraction.provider.api_key_env
-        valid_key_env = key_env.replace("_", "a").isalnum() and not key_env[:1].isdigit()
         checks += [
             ("Database", True, settings.database_url.split("?")[0]),
             (
@@ -254,12 +252,8 @@ def doctor(probe: bool = False, config: Path = Path("pipeline.toml")) -> None:
             ),
             (
                 "AI key",
-                bool(direct_key)
-                or (valid_key_env and bool(os.getenv(key_env)))
-                or settings.extraction.provider.allow_empty_api_key,
-                "configured in file"
-                if direct_key
-                else (f"environment {key_env}" if valid_key_env else "not configured"),
+                bool(direct_key) or settings.extraction.provider.allow_empty_api_key,
+                "configured in file" if direct_key else "not configured",
             ),
             (
                 "base_url",
