@@ -1,0 +1,66 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "paper-pipeline"
+version = "0.1.0"
+description = "Search, download, and extract structured data from open-access papers"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+dependencies = [
+  "aiohttp>=3.9",
+  "alembic>=1.13",
+  "openai>=1.40",
+  "pydantic>=2.7",
+  "pydantic-settings>=2.2",
+  "pymupdf>=1.24",
+  "pypdf>=4.2",
+  "rich>=13.7",
+  "sqlalchemy>=2.0",
+  "tenacity>=8.2",
+  "typer>=0.12",
+  "jsonschema>=4.22",
+]
+
+[project.optional-dependencies]
+dev = ["mypy>=1.10", "pytest>=8.2", "pytest-asyncio>=0.23", "ruff>=0.5", "aiohttp>=3.9"]
+
+[project.scripts]
+paper-pipeline = "paper_pipeline.cli:app"
+
+[tool.setuptools]
+packages = ["paper_pipeline", "paper_pipeline.db", "paper_pipeline.download", "paper_pipeline.export", "paper_pipeline.extract", "paper_pipeline.search"]
+
+[tool.setuptools.package-dir]
+paper_pipeline = "src"
+"paper_pipeline.db" = "src/db"
+"paper_pipeline.download" = "src/download"
+"paper_pipeline.export" = "src/export"
+"paper_pipeline.extract" = "src/extract"
+"paper_pipeline.search" = "src/search"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["src"]
+ignore_missing_imports = true
+warn_return_any = false
+warn_unused_ignores = false
+
+[[tool.mypy.overrides]]
+module = ["fitz", "jsonschema"]
+ignore_missing_imports = true

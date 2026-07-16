@@ -1,0 +1,141 @@
+# Paper Pipeline
+
+`paper-pipeline` is a Python 3.11+ command-line pipeline for searching arXiv and PubMed,
+downloading only openly accessible PDFs, extracting schema-validated data through any
+OpenAI-compatible provider, and persisting every durable state transition in SQLite.
+
+It never bypasses authentication, CAPTCHAs, institutional access, or paywalls. Automated tests
+use local mocks and do not call real scholarly or AI services.
+
+## Architecture
+
+- `search`: a common asynchronous provider protocol with deterministic per-source allocation,
+  concurrent pagination, recursive PubMed XML text, and immediate database upserts.
+- `download`: open-access candidate resolution is separate from HTTP transport. The downloader
+  performs paper-level concurrency, per-host pacing, Range resume, isolated `.part` files,
+  retry/backoff, `Retry-After`, PDF validation, and atomic replacement after handles close.
+- `extract`: PDF text and AI calls are decoupled. Text mode preserves `[PDF_PAGE N]`, chunks long
+  files serially per paper, extracts each chunk, then merges. File mode uploads to a provider's
+  Files API, calls Responses with `input_file`, and deletes the remote temporary file by default.
+- `db`: SQLAlchemy repository with Alembic migrations, SQLite WAL/foreign keys, indexed states,
+  identifier-aware upserts, runs, and events. Network calls occur outside transactions.
+- `cli`: Typer is a thin argument and presentation layer over services.
+
+## Install
+
+PowerShell with Conda:
+
+```powershell
+conda create -n paper-pipeline python=3.12 -y
+conda activate paper-pipeline
+python -m pip install -e ".[dev]"
+Copy-Item pipeline.example.toml pipeline.toml
+paper-pipeline init --config pipeline.toml --force
+```
+
+Bash:
+
+```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e '.[dev]'
+cp pipeline.example.toml pipeline.toml
+paper-pipeline init --config pipeline.toml --force
+```
+
+All relative paths in TOML are resolved against the configuration file's directory, not the
+current working directory. `${ENV_NAME}` expressions are expanded. Copy `.env.example` only as a
+reference: the CLI reads actual process environment variables and never stores or logs API keys.
+
+## Configuration
+
+Copy `pipeline.example.toml`. Replace the provider `base_url` and `model`; set the environment
+variable named by `api_key_env`. No provider URL, model, key name, API style, token parameter, or
+request option is fixed in code.
+
+Text-mode provider:
+
+```toml
+[extraction.provider]
+base_url = "https://your-provider.example/v1"
+api_key_env = "AI_API_KEY"
+model = "your-model-id"
+api_style = "chat_completions"
+pdf_mode = "text"
+structured_output = "auto" # strict -> json -> prompt
+output_token_param = "max_tokens"
+```
+
+Native file mode requires provider support for Files, Responses, and `input_file`:
+
+```toml
+api_style = "responses"
+pdf_mode = "file"
+keep_remote_file = false
+```
+
+## Commands
+
+Both `python -m paper_pipeline --help` and `paper-pipeline --help` are supported.
+
+```bash
+paper-pipeline init
+paper-pipeline search --keywords "dry reforming of methane" --sources arxiv,pubmed --year 2022-2026 --total 200
+paper-pipeline import-csv --input papers.csv
+paper-pipeline download --concurrency 10
+paper-pipeline extract --concurrency 4
+paper-pipeline extract --schema schemas/custom.json
+paper-pipeline run --keywords "dry reforming of methane" --total 200
+paper-pipeline resume --retry-failed
+paper-pipeline status
+paper-pipeline retry --stage download --include-unavailable
+paper-pipeline retry --stage extract
+paper-pipeline export --format csv --output exports/results.csv
+paper-pipeline export --format jsonl --output exports/results.jsonl --only-extracted
+paper-pipeline doctor
+```
+
+Repeat `--keywords` for multiple terms. `--total` is the result target per keyword; it is divided
+deterministically over selected sources, with earlier source names receiving any remainder.
+
+CSV import recognizes `title, authors, year, abstract, url, source, doi, pmid, pmcid, arxiv_id,
+pdf_url, file, resolved_url, status`. DOI, PMCID, PMID, arXiv ID, normalized URL, then normalized
+title define deduplication priority. Valid existing PDF paths are registered without downloading.
+
+## State and recovery
+
+Download states are `pending/downloading/downloaded/skipped/unavailable/failed`; extraction states
+are `pending/extracting/success/failed`. `resume` reads SQLite, so it survives process restarts and
+does not repeat successful downloads or paid AI calls. `retry` resets classified failures without
+deleting valid PDFs or successful extraction results unless extraction `--force` is explicit.
+
+## Development and tests
+
+```bash
+ruff check .
+ruff format --check .
+mypy src
+pytest
+```
+
+The suite covers normalization, identifier priority, metadata merge, year allocation, nested
+PubMed XML, filenames/PDF headers, JSON recovery/schema validation, chunking, configuration,
+migrations/upserts/retry/export, and mocked Range HTTP downloads. No test requires real network or
+AI credentials.
+
+## Known limitations
+
+- Scanned PDFs without embedded text fail with `PDF_TEXT_EMPTY`; cloud OCR is intentionally absent.
+- Landing-page PDF discovery supports standard `citation_pdf_url`; JavaScript-only pages are not
+  browser-automated.
+- Open-access metadata can be incomplete or stale. `REMOTE_FORBIDDEN` and `REMOTE_NOT_FOUND` are
+  kept distinct from `NO_OPEN_ACCESS_PDF` and local processing failures.
+- Provider-specific deviations from OpenAI-compatible Files/Responses semantics may require
+  `extra_headers` or `request_options`, or a small adapter extension.
+- SQLite is intended for a single local pipeline deployment, not a distributed worker fleet.
+
+## Security and legal scope
+
+Only explicitly public candidates from metadata, arXiv, PMC OA, Unpaywall, Semantic Scholar, and
+publisher citation metadata are considered. Secrets remain in environment variables. Authorization
+headers and keys are never printed or persisted.

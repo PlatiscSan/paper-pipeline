@@ -1,0 +1,58 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+pipeline.toml
+pipeline.local.toml
+
+# Python environments
+.venv/
+venv/
+env/
+.conda-env/
+.python-version
+
+# Python bytecode and tool caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Packaging output
+build/
+dist/
+*.egg-info/
+*.egg
+*.whl
+*.zip
+
+# Runtime data and generated exports
+data/
+papers/
+exports/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.part
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+~$*
+
+# IDE and operating-system metadata
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini
