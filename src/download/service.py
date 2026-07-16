@@ -20,7 +20,10 @@ class DownloadService:
     async def run(
         self, concurrency: int | None = None, include_failed: bool = False
     ) -> dict[str, int]:
+        recovered = self.repository.recover_in_progress("download")
         papers = self.repository.candidates("download", include_failed)
+        if not papers:
+            return {"candidates": 0, "recovered": recovered}
         sem = asyncio.Semaphore(concurrency or self.settings.downloader.concurrency)
         timeout = aiohttp.ClientTimeout(total=300, connect=30)
         async with aiohttp.ClientSession(timeout=timeout) as session:
@@ -41,7 +44,10 @@ class DownloadService:
                     return await self._one(paper, resolver, client)
 
             statuses = await asyncio.gather(*(one(p) for p in papers))
-        return {name: statuses.count(name) for name in set(statuses)}
+        summary = {name: statuses.count(name) for name in set(statuses)}
+        summary["candidates"] = len(papers)
+        summary["recovered"] = recovered
+        return summary
 
     async def _one(self, paper: Paper, resolver: Resolver, client: DownloadClient) -> str:
         if paper.pdf_path and is_pdf(__import__("pathlib").Path(paper.pdf_path)):

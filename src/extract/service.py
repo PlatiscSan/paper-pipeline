@@ -28,6 +28,7 @@ class ExtractionService:
     async def run(
         self, concurrency: int | None = None, include_failed: bool = False
     ) -> dict[str, int]:
+        self.repository.recover_in_progress("extract")
         papers = self.repository.candidates("extract", include_failed)
         sem = asyncio.Semaphore(concurrency or self.settings.extraction.concurrency)
 

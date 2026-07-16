@@ -93,6 +93,16 @@ class Repository:
                 session.expunge(item)
             return items
 
+    def recover_in_progress(self, stage: str) -> int:
+        """Return interrupted process-owned states to pending after a restart."""
+        column = Paper.download_status if stage == "download" else Paper.extraction_status
+        active = "downloading" if stage == "download" else "extracting"
+        with self.db.session() as session:
+            papers = list(session.scalars(select(Paper).where(column == active)))
+            for paper in papers:
+                setattr(paper, column.key, "pending")
+            return len(papers)
+
     def update(self, paper_id: int, **values: Any) -> None:
         with self.db.session() as session:
             paper = session.get(Paper, paper_id)
@@ -133,7 +143,8 @@ class Repository:
                 "pdf_bytes": sum(p.downloaded_bytes for p in papers),
                 "input_tokens": sum(p.extraction_input_tokens or 0 for p in papers),
                 "output_tokens": sum(p.extraction_output_tokens or 0 for p in papers),
-                "keywords": session.scalar(select(func.count()).select_from(PaperKeyword)) or 0,
+                "keywords": session.scalar(select(func.count(func.distinct(PaperKeyword.keyword))))
+                or 0,
             }
 
     def create_run(self, command: str, arguments: dict[str, Any]) -> int:

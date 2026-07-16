@@ -17,6 +17,10 @@ def test_migrate_upsert_retry_export(tmp_path: Path) -> None:
     assert first.id == second.id and len(repo.all_papers()) == 1
     repo.update(first.id, download_status="failed")
     assert repo.retry("download") == 1
+    repo.update(first.id, download_status="downloading")
+    assert repo.recover_in_progress("download") == 1
+    assert repo.candidates("download")[0].id == first.id
+    assert repo.status()["keywords"] == 1
     output = tmp_path / "result.jsonl"
     assert export(repo, output, "jsonl") == 1
     assert json.loads(output.read_text())["doi"] == "10.1/x"

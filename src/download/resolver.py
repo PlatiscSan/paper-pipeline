@@ -20,6 +20,12 @@ class Resolver:
         if paper.arxiv_id:
             result.append(Candidate(f"https://arxiv.org/pdf/{paper.arxiv_id}.pdf", "arxiv"))
         if paper.pmcid:
+            result.append(
+                Candidate(
+                    f"https://www.ebi.ac.uk/europepmc/webservices/rest/{paper.pmcid}/fullTextPDF",
+                    "europe_pmc",
+                )
+            )
             result.extend(await self._pmc(paper.pmcid))
         if paper.doi and self.email:
             result.extend(await self._unpaywall(paper.doi))
