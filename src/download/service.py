@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+from urllib.parse import urlsplit
 
 import aiohttp
 from paper_pipeline.config import Settings
@@ -99,6 +100,13 @@ class DownloadService:
             paper.id, download_status="downloading", download_attempts=paper.download_attempts + 1
         )
         candidates = await resolver.candidates(paper)
+        identity = paper.doi or paper.pmcid or paper.arxiv_id or str(paper.id)
+        logger.debug(
+            "Download resolved: paper=%s candidates=%d methods=%s",
+            identity,
+            len(candidates),
+            ",".join(candidate.method for candidate in candidates) or "none",
+        )
         if not candidates:
             self.repository.update(
                 paper.id,
@@ -109,7 +117,20 @@ class DownloadService:
             return "unavailable"
         last = DownloadResult()
         for candidate in candidates:
+            logger.debug(
+                "Download attempt: paper=%s method=%s host=%s",
+                identity,
+                candidate.method,
+                urlsplit(candidate.url).netloc,
+            )
             last = await client.fetch(candidate, destination(self.settings.papers_dir, paper))
+            logger.debug(
+                "Download result: paper=%s method=%s status=%s error_code=%s",
+                identity,
+                candidate.method,
+                last.status,
+                last.error_code or "none",
+            )
             if last.status == "downloaded":
                 self.repository.update(
                     paper.id,

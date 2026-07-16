@@ -1,5 +1,6 @@
 """Resolve only explicitly open-access PDF candidates."""
 
+import logging
 import re
 from html.parser import HTMLParser
 from urllib.parse import urljoin, urlsplit
@@ -7,6 +8,8 @@ from urllib.parse import urljoin, urlsplit
 import aiohttp
 from paper_pipeline.db.models import Paper
 from paper_pipeline.download.models import Candidate
+
+logger = logging.getLogger(__name__)
 
 PDF_LABEL = re.compile(r"\b(?:open|view|download|full\s*text)?\s*pdf\b", re.I)
 BLOCKED_LABELS = ("login", "log in", "sign in", "purchase", "subscribe", "institutional")
@@ -96,11 +99,32 @@ class Resolver:
         if paper.doi and self.semantic_key:
             result.extend(await self._semantic(paper.doi))
         if paper.doi and self.use_publisher_apis:
-            result.extend(self._plos(paper.doi))
+            plos = self._plos(paper.doi)
+            if plos:
+                logger.debug(
+                    "Publisher lookup: doi=%s publisher=plos candidates=%d", paper.doi, len(plos)
+                )
+                result.extend(plos)
             if self.springer_key:
                 result.extend(await self._springer(paper.doi))
+            else:
+                logger.debug(
+                    "Publisher lookup skipped: doi=%s publisher=springer_nature reason=no_api_key",
+                    paper.doi,
+                )
             if self.elsevier_key:
-                result.extend(self._elsevier(paper.doi))
+                elsevier = self._elsevier(paper.doi)
+                logger.debug(
+                    "Publisher lookup: doi=%s publisher=elsevier candidates=%d",
+                    paper.doi,
+                    len(elsevier),
+                )
+                result.extend(elsevier)
+            else:
+                logger.debug(
+                    "Publisher lookup skipped: doi=%s publisher=elsevier reason=no_api_key",
+                    paper.doi,
+                )
         if paper.url:
             result.extend(await self._landing(paper.url))
         unique: dict[str, Candidate] = {}
@@ -176,9 +200,20 @@ class Resolver:
                 params={"api_key": self.springer_key, "q": f"doi:{doi}"},
             ) as response:
                 if response.status != 200:
+                    logger.debug(
+                        "Publisher API response: doi=%s publisher=springer_nature "
+                        "http_status=%d candidates=0",
+                        doi,
+                        response.status,
+                    )
                     return []
                 records = (await response.json()).get("records") or []
-        except (aiohttp.ClientError, ValueError):
+        except (aiohttp.ClientError, ValueError) as exc:
+            logger.debug(
+                "Publisher API error: doi=%s publisher=springer_nature error=%s",
+                doi,
+                type(exc).__name__,
+            )
             return []
         urls: list[str] = []
         for record in records:
@@ -190,7 +225,14 @@ class Resolver:
                     candidate_url, kind = str(value), ""
                 if candidate_url and ("pdf" in kind or ".pdf" in candidate_url.lower()):
                     urls.append(candidate_url)
-        return [Candidate(url, "springer_nature_oa") for url in dict.fromkeys(urls)]
+        candidates = [Candidate(url, "springer_nature_oa") for url in dict.fromkeys(urls)]
+        logger.debug(
+            "Publisher API response: doi=%s publisher=springer_nature "
+            "http_status=200 candidates=%d",
+            doi,
+            len(candidates),
+        )
+        return candidates
 
     def _elsevier(self, doi: str) -> list[Candidate]:
         """Use Elsevier's official retrieval API; the API enforces article entitlement."""
