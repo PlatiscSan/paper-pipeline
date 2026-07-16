@@ -36,7 +36,9 @@ class Repository:
                 terms.append(column == value)
         if normalize_url(record.url):
             terms.append(Paper.url == normalize_url(record.url))
-        terms.append(Paper.title_normalized == normalize_title(record.title))
+        normalized_title = normalize_title(record.title)
+        if normalized_title:
+            terms.append(Paper.title_normalized == normalized_title)
         return session.scalar(select(Paper).where(or_(*terms)))
 
     def upsert(self, record: PaperRecord) -> Paper:

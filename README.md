@@ -1,6 +1,7 @@
 # Paper Pipeline
 
-`paper-pipeline` is a Python 3.11+ command-line pipeline for searching arXiv and PubMed,
+`paper-pipeline` is a Python 3.11+ command-line pipeline for searching arXiv, PubMed,
+Crossref, Europe PMC, Semantic Scholar, and OpenAlex,
 downloading only openly accessible PDFs, extracting schema-validated data through any
 OpenAI-compatible provider, and persisting every durable state transition in SQLite.
 
@@ -10,7 +11,8 @@ use local mocks and do not call real scholarly or AI services.
 ## Architecture
 
 - `search`: a common asynchronous provider protocol with deterministic per-source allocation,
-  concurrent pagination, recursive PubMed XML text, and immediate database upserts.
+  concurrent pagination, recursive PubMed XML text, immediate database upserts, and deterministic
+  reclamation of unused source quotas.
 - `download`: open-access candidate resolution is separate from HTTP transport. The downloader
   performs paper-level concurrency, per-host pacing, Range resume, isolated `.part` files,
   retry/backoff, `Retry-After`, PDF validation, and atomic replacement after handles close.
@@ -97,7 +99,13 @@ paper-pipeline doctor
 ```
 
 Repeat `--keywords` for multiple terms. `--total` is the result target per keyword; it is divided
-deterministically over selected sources, with earlier source names receiving any remainder.
+deterministically over selected sources, with earlier source names receiving any remainder. When a
+source returns fewer records than allocated, the deficit is reassigned in configured source order
+to sources that filled their allocation. Cross-source and cross-keyword results are deduplicated.
+
+Available source names are `arxiv`, `pubmed`, `crossref`, `europe_pmc`, `semantic_scholar`, and
+`openalex`. OpenAlex currently requires a free API key in `crawler.openalex_api_key`; Semantic
+Scholar can use `crawler.semantic_scholar_api_key` for higher and more reliable rate limits.
 
 CSV import recognizes `title, authors, year, abstract, url, source, doi, pmid, pmcid, arxiv_id,
 pdf_url, file, resolved_url, status`. DOI, PMCID, PMID, arXiv ID, normalized URL, then normalized

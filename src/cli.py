@@ -47,6 +47,15 @@ def context(config: Path) -> tuple[Settings, Repository]:
     return settings, Repository(Database(settings.database_url))
 
 
+def make_search_service(repository: Repository, settings: Settings) -> SearchService:
+    return SearchService(
+        repository,
+        os.getenv(settings.crawler.email_env, ""),
+        settings.crawler.semantic_scholar_api_key.get_secret_value(),
+        settings.crawler.openalex_api_key.get_secret_value(),
+    )
+
+
 @app.command()
 def init(config: Path = Path("pipeline.toml"), force: bool = False) -> None:
     """Create configuration, data directories, and migrate SQLite."""
@@ -73,16 +82,16 @@ def init(config: Path = Path("pipeline.toml"), force: bool = False) -> None:
 @app.command()
 def search(
     keywords: Annotated[list[str], typer.Option("--keywords")],
-    sources: str = "arxiv,pubmed",
+    sources: str | None = None,
     year: str | None = None,
     total: int = 100,
     config: Path = Path("pipeline.toml"),
 ) -> None:
     """Search one or more keywords (repeat --keywords)."""
     settings, repo = context(config)
-    email = os.getenv(settings.crawler.email_env, "")
+    selected = sources.split(",") if sources else settings.crawler.sources
     result = asyncio.run(
-        SearchService(repo, email).run(keywords, sources.split(","), total, parse_years(year))
+        make_search_service(repo, settings).run(keywords, selected, total, parse_years(year))
     )
     console.print(result)
 
@@ -148,9 +157,7 @@ def run(
     try:
         console.print(
             asyncio.run(
-                SearchService(repo, os.getenv(settings.crawler.email_env, "")).run(
-                    keywords, settings.crawler.sources, total
-                )
+                make_search_service(repo, settings).run(keywords, settings.crawler.sources, total)
             )
         )
     except Exception as exc:

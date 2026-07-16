@@ -2,11 +2,13 @@ database_url = "sqlite:///data/papers.db"
 papers_dir = "data/papers"
 
 [crawler]
-sources = ["arxiv", "pubmed"]
+sources = ["arxiv", "pubmed", "crossref", "europe_pmc", "semantic_scholar", "openalex"]
 total = 100
 concurrency = 5
 delay_seconds = 0.5
 email_env = "ACADEMIC_CRAWLER_EMAIL"
+semantic_scholar_api_key = ""
+openalex_api_key = ""
 
 [downloader]
 concurrency = 10

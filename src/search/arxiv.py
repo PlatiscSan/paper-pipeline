@@ -30,7 +30,8 @@ class ArxivProvider:
     async def _page(
         self, keyword: str, start: int, size: int, years: tuple[int, int] | None
     ) -> list[PaperRecord]:
-        query = f'all:"{keyword}"'
+        terms = [term for term in keyword.split() if len(term) > 2]
+        query = " AND ".join(f'all:"{term}"' for term in terms) or f'all:"{keyword}"'
         if years:
             query += f" AND submittedDate:[{years[0]}01010000 TO {years[1]}12312359]"
         params = {"search_query": query, "start": start, "max_results": size}

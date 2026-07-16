@@ -10,11 +10,20 @@ from pydantic import BaseModel, Field, SecretStr, model_validator
 
 
 class CrawlerConfig(BaseModel):
-    sources: list[str] = ["arxiv", "pubmed"]
+    sources: list[str] = [
+        "arxiv",
+        "pubmed",
+        "crossref",
+        "europe_pmc",
+        "semantic_scholar",
+        "openalex",
+    ]
     total: int = 100
     concurrency: int = 5
     delay_seconds: float = 0.5
     email_env: str = "ACADEMIC_CRAWLER_EMAIL"
+    semantic_scholar_api_key: SecretStr = SecretStr("")
+    openalex_api_key: SecretStr = SecretStr("")
 
 
 class DownloaderConfig(BaseModel):
