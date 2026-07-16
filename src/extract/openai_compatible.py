@@ -21,16 +21,16 @@ experiments to review authors."""
 
 class OpenAICompatibleProvider:
     def __init__(self, config: ProviderConfig, extraction: ExtractionConfig) -> None:
-        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", config.api_key_env):
+        if config.api_key_env and not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", config.api_key_env):
             raise PipelineError(
                 ErrorCode.CONFIG_INVALID,
                 "api_key_env must be an environment variable name, not an API key value",
             )
-        key = os.getenv(config.api_key_env, "")
+        key = config.api_key.get_secret_value()
+        if not key and config.api_key_env:
+            key = os.getenv(config.api_key_env, "")
         if not key and not config.allow_empty_api_key:
-            raise PipelineError(
-                ErrorCode.CONFIG_INVALID, f"environment variable {config.api_key_env} is not set"
-            )
+            raise PipelineError(ErrorCode.CONFIG_INVALID, "AI API key is not configured")
         self.config, self.extraction = config, extraction
         self.client = AsyncOpenAI(
             api_key=key or "unused",

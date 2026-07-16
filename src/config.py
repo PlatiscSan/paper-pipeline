@@ -6,7 +6,7 @@ import tomllib
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, SecretStr, model_validator
 
 
 class CrawlerConfig(BaseModel):
@@ -34,7 +34,8 @@ class DownloaderConfig(BaseModel):
 class ProviderConfig(BaseModel):
     name: str = "custom-provider"
     base_url: str = "https://example.com/v1"
-    api_key_env: str = "AI_API_KEY"
+    api_key: SecretStr = SecretStr("")
+    api_key_env: str = ""
     model: str = "replace-with-model-id"
     api_style: Literal["chat_completions", "responses"] = "chat_completions"
     pdf_mode: Literal["text", "file"] = "text"

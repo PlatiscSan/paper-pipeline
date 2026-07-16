@@ -32,7 +32,8 @@ max_output_tokens = 12000
 [extraction.provider]
 name = "custom-provider"
 base_url = "https://example.com/v1"
-api_key_env = "AI_API_KEY"
+api_key = ""
+api_key_env = ""
 model = "replace-with-model-id"
 api_style = "chat_completions"
 pdf_mode = "text"

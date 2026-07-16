@@ -50,15 +50,16 @@ reference: the CLI reads actual process environment variables and never stores o
 ## Configuration
 
 Copy `pipeline.example.toml`. Replace the provider `base_url` and `model`; set the environment
-variable named by `api_key_env`. No provider URL, model, key name, API style, token parameter, or
-request option is fixed in code.
+value in `api_key`. No provider URL, model, API style, token parameter, or request option is fixed
+in code. Keep `pipeline.toml` private; it is ignored by Git and keys are never logged or saved to
+SQLite. The older `api_key_env` option remains available as a fallback.
 
 Text-mode provider:
 
 ```toml
 [extraction.provider]
 base_url = "https://your-provider.example/v1"
-api_key_env = "AI_API_KEY"
+api_key = "replace-with-your-key"
 model = "your-model-id"
 api_style = "chat_completions"
 pdf_mode = "text"

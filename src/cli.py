@@ -235,6 +235,7 @@ def doctor(probe: bool = False, config: Path = Path("pipeline.toml")) -> None:
     try:
         settings, repo = context(config)
         repo.status()
+        direct_key = settings.extraction.provider.api_key.get_secret_value()
         key_env = settings.extraction.provider.api_key_env
         valid_key_env = key_env.replace("_", "a").isalnum() and not key_env[:1].isdigit()
         checks += [
@@ -246,9 +247,12 @@ def doctor(probe: bool = False, config: Path = Path("pipeline.toml")) -> None:
             ),
             (
                 "AI key",
-                valid_key_env
-                and (bool(os.getenv(key_env)) or settings.extraction.provider.allow_empty_api_key),
-                f"environment {key_env}" if valid_key_env else "invalid api_key_env setting",
+                bool(direct_key)
+                or (valid_key_env and bool(os.getenv(key_env)))
+                or settings.extraction.provider.allow_empty_api_key,
+                "configured in file"
+                if direct_key
+                else (f"environment {key_env}" if valid_key_env else "not configured"),
             ),
             (
                 "base_url",
